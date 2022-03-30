@@ -1,0 +1,53 @@
+stages:
+  - stage: DockerBuild
+    displayName: Docker Build And Push Stage
+    condition: and(succeeded(), eq(variables.isTag, true))
+    dependsOn: DotNetCoreBuild
+    jobs:
+      - job: Docker
+        displayName: Docker Build And Push
+        # 1. Update assembly information metadata with versions
+        # 2. Download buildinfo.json artifact
+        # 3. Docker build
+        # 4. Docker login
+        # 5. Docker push
+        steps:
+          - task: Assembly-Info-NetCore@3
+            displayName: Set Assembly Metadata
+            condition: eq(variables.buildInfoFileExists, 'true')
+            inputs:
+              Path: '$(projectParentDirectory)/$(projectSourceRelativeDirectory)'
+              FileNames: '$(Build.SourcesDirectory)/$(projectParentDirectory)/$(projectSourceRelativeDirectory)/*.csproj'
+              FileEncoding: 'iso-8859-2'
+              InsertAttributes: true
+              WriteBOM: true
+              FailOnWarning: true
+              Authors: '$(assemblyAuthor)'
+              PackageVersion: '$(buildVersion).$(buildPatch)'
+              UpdateBuildNumber: '$(Build.DefinitionName)_v$(buildVersion).$(buildPatch)'
+              AddBuildTag: 'v$(buildVersion).$(buildPatch)'
+              DisableTelemetry: true
+          - task: DownloadPipelineArtifact@2
+            displayName: Download buildinfo.json Artifact
+            inputs:
+              source: 'current'
+              artifact: buildinfo
+              path: $(projectParentDirectory)/$(projectSourceRelativeDirectory)
+          - bash: |
+              docker build \
+                -t $(imageName):$(imageTag) \
+                -f $(projectParentDirectory)/$(projectSourceRelativeDirectory)/Dockerfile \
+                .
+            displayName: Docker Build
+            failOnStderr: true
+          - bash: |
+              echo $(registryPassword) | docker login \
+                -u $(registryLogin) \
+                --password-stdin \
+                $(registryServerName)
+            displayName: Login To ACR
+          - bash: |
+              docker push \
+                $(imageName):$(imageTag)
+            displayName: Docker Push
+            failOnStderr: true

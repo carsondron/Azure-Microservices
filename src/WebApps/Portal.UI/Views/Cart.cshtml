@@ -1,0 +1,96 @@
+﻿@page
+@model CartViewModel
+@{
+    ViewData["Title"] = "Cart";
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-page="Index">Home</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Cart</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<div class="container mb-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="table-responsive">
+                <table class="table table-striped table-dark">
+                    <thead>
+                        <tr>
+                            <th scope="col"> </th>
+                            <th scope="col">Product</th>
+                            <th scope="col">Available</th>
+                            <th scope="col" class="text-center">Quantity</th>
+                            <th scope="col" class="text-right">Price</th>
+                            <th> </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        @foreach (var cartItem in Model.Cart.Items)
+                        {
+                        <tr>
+                            <td><img src="https://dummyimage.com/50x50/ffffff/050612" /></td>
+                            <td>@cartItem.ProductName</td>
+                            <td>In stock</td>
+
+                            <td>
+                                <div class="form-group">
+                                    <div class="input-group input-group-sm">
+                                        <div class="input-group-prepend">
+                                            <button type="button" class="quantity-left-minus btn btn-sm btn-number btnplusminus" data-type="minus" data-field="">
+                                                <i class="fa fa-minus"></i>
+                                            </button>
+                                        </div>
+                                        <input class="form-control input-sm" type="text" id="quantity" name="quantity" value="@cartItem.Quantity" />
+                                        <div class="input-group-append">
+                                            <button type="button" class="quantity-right-plus btn btn-sm btn-number btnplusminus" data-type="plus" data-field="">
+                                                <i class="fa fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-right">$@(cartItem.Price * cartItem.Quantity)</td>
+                            <td class="text-right">
+                                <form asp-page-handler="removetocart" method="post">
+                                    <button class="btn btn-sm btn-danger"><i class="fa fa-trash"></i></button>
+                                    <input type="hidden" asp-for="@cartItem.ProductId" name="productId" />
+                                </form>
+
+                            </td>
+                        </tr>
+                        }
+
+                        <tr>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td><strong>Total</strong></td>
+                            <td class="text-right"><strong>$@Model.Cart.TotalPrice</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="col mb-2">
+            <div class="row">
+                <div class="col-sm-12  col-md-6">
+                    <a asp-page="Index" class="btn btn-lg btn-block btn-success">Continue Shopping</a>
+                </div>
+                <div class="col-sm-12 col-md-6 text-right">
+                    <a asp-page="CheckOut" class="btn btn-lg btn-block btn-danger text-uppercase">CheckOut</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

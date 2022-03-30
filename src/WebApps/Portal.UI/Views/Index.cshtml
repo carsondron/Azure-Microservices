@@ -1,0 +1,27 @@
+﻿@page
+@model IndexViewModel
+@{
+    ViewData["Title"] = "Laptop Store - Home";
+}
+
+<hr />
+
+<div class="container mt-3">
+    <div class="row">
+        <div class="col-sm">
+            <div class="card">
+                <div class="card-header bg-primary text-white text-uppercase">
+                    <i class="fa-regular fa-star"></i> Latest laptop range
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @foreach (var product in Model.ProductList.Take(4))
+                        {
+                            <partial name="_ProductItemPartial" model="@product" />
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

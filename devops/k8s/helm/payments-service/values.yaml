@@ -1,0 +1,67 @@
+replicaCount: 1
+
+image:
+  repository: payments-service
+  pullPolicy: IfNotPresent
+
+imagePullSecret: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: false
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  {}
+  # fsGroup: 2000
+
+securityContext:
+  {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources:
+  requests:
+    memory: 256Mi
+    cpu: 50m
+  limits:
+    memory: 300Mi
+    cpu: 150m
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+env: []
+
+probes:
+  liveness:
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 15
+    port: 80
+  readiness:
+    path: /health
+    timeoutSeconds: 5
+    initialDelaySeconds: 30
+    periodSeconds: 60
+    port: 80

@@ -1,0 +1,22 @@
+stages:
+  - stage: HelmPackage
+    displayName: Helm Package Stage
+    condition: and(succeeded(), eq(variables.isTag, true))
+    dependsOn: DockerBuild
+    jobs:
+      - job: HelmPackagePublish
+        displayName: Helm Package And Publish
+        # 1. Install Helm
+        # 2. Package and push to registry
+        steps:
+          - task: HelmInstaller@1
+            displayName: Install Helm
+            inputs:
+              helmVersionToInstall: $(helmVersion)
+          - bash: |
+              echo $(registryPassword) | helm registry login $(registryServerName) --username $(registryLogin) --password-stdin
+              cd "$(Build.SourcesDirectory)/devops/k8s/helm"
+              package=$(helm package --app-version $(imageTag) --version $(helmChartVersion) ./$(projectName) | awk -F'[:]' '{gsub(/ /, "", $2); print $2}')
+              helm push $package oci://$(registryServerName)/helm
+            displayName: Helm Package
+            failOnStderr: true

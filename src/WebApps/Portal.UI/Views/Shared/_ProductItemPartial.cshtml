@@ -1,0 +1,30 @@
+﻿@model ProductModel
+
+<div class="col-md-3 mb-4 d-flex align-items-stretch">
+    <div class="card">
+        <a asp-page="ProductDetail" asp-route-productId="@Model.Id"></a>
+        <div class="card-body d-flex flex-column">
+            <h6 class="card-title">@Model.Name</h6>
+            <p class="card-text">@Model.Summary</p>
+            <p class="card-text">
+                <ul>
+                    @foreach (var desc in Model.Description.Split(','))
+                    {
+                        <li>@desc?.Trim()</li>
+                    }
+                </ul>
+            </p>
+            <div class="row mt-auto">
+                <div class="col">
+                    <p class="btn btn-info btn-block align-self-start p-2">$@Model.Price</p>
+                </div>
+                <div class="col">
+                    <form asp-page-handler="AddToCart" method="post" name="addToCartForm" id="add_cart_form">
+                        <a href="javascript:;" onclick="parentNode.submit();" class="btn btn-success btn-block align-self-start p-2">Add to Cart</a>
+                        <input type="hidden" asp-for="@Model.Id" name="productId" />
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

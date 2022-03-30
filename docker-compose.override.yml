@@ -1,0 +1,129 @@
+version: '3.4'
+
+services:
+  products.api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - "DatabaseSettings:ConnectionString=mongodb://productsdb:27017"
+      - "ApiSettings:Opentelemetry:OtlpExporterAddress=http://host.docker.internal:4317"
+    depends_on:
+      - productsdb
+      - otel-collector
+    ports:
+      - "8000:80"
+
+  cart.api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - "CacheSettings:ConnectionString=cartdb:6379"
+      - "EventBusSettings:HostAddress=amqp://guest:guest@rabbitmq:5672"
+      - "ApiSettings:Opentelemetry:OtlpExporterAddress=http://host.docker.internal:4317"
+    depends_on:
+      - cartdb
+      - rabbitmq
+      - otel-collector
+    ports:
+      - "8001:80"
+
+  orders.api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - "ConnectionStrings:OrdersConnectionString=Server=ordersdb;Database=ordersdb;User Id=sa;Password=mUJ785!5yFoa"
+      - "GrpcSettings:NotificationsUrl=http://host.docker.internal:8500"
+      - "EventBusSettings:HostAddress=amqp://guest:guest@rabbitmq:5672"
+      - "ApiSettings:Opentelemetry:OtlpExporterAddress=http://host.docker.internal:4317"
+    depends_on:
+      - ordersdb
+      - rabbitmq
+      - otel-collector
+    ports:
+      - "8004:80"
+
+  notifications.grpc:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - "ApiSettings:Opentelemetry:OtlpExporterAddress=http://host.docker.internal:4317"
+    depends_on:
+      - otel-collector
+    ports:
+      - "8005:80"
+      - "8500:5000"
+
+  payments.api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - "EventBusSettings:HostAddress=amqp://guest:guest@rabbitmq:5672"
+      - "ApiSettings:Opentelemetry:OtlpExporterAddress=http://host.docker.internal:4317"
+    depends_on:
+      - rabbitmq
+      - otel-collector
+    ports:
+      - "8010:80"
+
+  portal.ui:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - "ApiSettings:ProductsServiceAddress=http://host.docker.internal:8000/api/v1/"
+      - "ApiSettings:OrdersServiceAddress=http://host.docker.internal:8004/api/v1/"
+      - "ApiSettings:CartServiceAddress=http://host.docker.internal:8001/api/v1/"
+      - "ApiSettings:Opentelemetry:OtlpExporterAddress=http://host.docker.internal:4317"
+      - "Auth:TokenHeader=token"
+      - "Auth.UserIdHeader=x-user-id"
+    depends_on:
+      - products.api
+      - cart.api
+      - orders.api
+      - notifications.grpc
+      - otel-collector
+    ports:
+      - "8006:80"
+
+  # Datasources
+
+  productsdb:
+    container_name: productsdb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  cartdb:
+    container_name: cartdb
+    restart: always    
+    ports:
+      - "6379:6379"
+
+  ordersdb:
+    container_name: ordersdb
+    environment:
+      SA_PASSWORD: "mUJ785!5yFoa"
+      ACCEPT_EULA: "Y"
+    restart: always
+    ports:
+      - "1433:1433"
+
+  rabbitmq:
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  # Opentelemetry
+
+  jaeger:
+    container_name: jaeger
+    ports:
+      - "16686:16686"
+      - "14250"
+
+  otel-collector:
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector-config.yml"]
+    volumes:
+      - ./devops/config/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+    ports:
+      - "4317:4317"
+    depends_on:
+      - jaeger

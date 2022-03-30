@@ -1,0 +1,63 @@
+version: '3.4'
+
+services:
+  products.api:
+    image: ${DOCKER_REGISTRY-}products
+    build:
+      context: .
+      dockerfile: src/Services/Products/Products.API/Dockerfile
+
+  cart.api:
+    image: ${DOCKER_REGISTRY-}cart
+    build:
+      context: .
+      dockerfile: src/Services/Cart/Cart.API/Dockerfile
+
+  orders.api:
+    image: ${DOCKER_REGISTRY-}orders
+    build:
+      context: .
+      dockerfile: src/Services/Orders/Orders.API/Dockerfile
+
+  notifications.grpc:
+    image: ${DOCKER_REGISTRY-}notifications
+    build:
+      context: .
+      dockerfile: src/Services/Notifications/Notifications.Grpc/Dockerfile
+
+  payments.api:
+    image: ${DOCKER_REGISTRY-}payments
+    build:
+      context: .
+      dockerfile: src/Services/Payments/Payments.API/Dockerfile
+
+  portal.ui:
+    image: ${DOCKER_REGISTRY-}portal
+    build:
+      context: .
+      dockerfile: src/WebApps/Portal.UI/Dockerfile
+
+  # Datastores
+
+  productsdb:
+    image: mongo
+
+  cartdb:
+    image: redis:alpine
+
+  ordersdb:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+
+  rabbitmq:
+    image: rabbitmq:3.9.13-management-alpine
+
+  # Opentelemetry
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.45.0
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.31
+
+volumes:
+  mongo_data:

@@ -1,0 +1,55 @@
+parameters:
+  - name: projectName
+    displayName: Project Name
+    type: string
+    default: any
+  - name: projectParentDirectory
+    displayName: Project Parent Directory
+    type: string
+    default: any
+  - name: projectSourceRelativeDirectory
+    displayName: Project Source Directory Relative To Parent Directory
+    type: string
+    default: any
+  - name: assemblyAuthor
+    displayName: Author For Assembly Info
+    type: string
+    default: kasunt
+  - name: buildConfiguration
+    displayName: Build Configuration to Use
+    default: Debug
+    values:
+      - Debug
+      - Release
+
+variables:
+  # Enable ACR vars group (registryName, registryLogin, registryPassword)
+  - group: acr-vars
+  - name: projectName
+    value: ${{ parameters.projectName }}
+  - name: projectParentDirectory
+    value: ${{ parameters.projectParentDirectory }}
+  - name: projectSourceRelativeDirectory
+    value: ${{ parameters.projectSourceRelativeDirectory }}
+  - name: helmVersion
+    value: 3.8.1
+  - name: buildConfig
+    value: ${{ parameters.buildConfiguration }}
+  - name: registryServerName
+    value: '$(registryName).azurecr.io'
+  - name: imageName
+    value: '$(registryServerName)/${{ parameters.projectName }}'
+  - name: imageTag
+    value: $(Build.SourceBranchName)
+  - name: buildVersion
+    value: $(Build.SourceBranchName)
+  - name: buildPatch
+    value: $[counter(variables['Build.SourceBranchName'], 0)]
+  - name: assemblyAuthor
+    value: ${{ parameters.assemblyAuthor }}
+  - name: isMaster
+    value: $[startsWith(variables['Build.SourceBranch'], 'refs/heads/master')]
+  - name: isTag
+    value: $[startsWith(variables['Build.SourceBranch'], 'refs/tags')]
+  - name: helmChartVersion
+    value: $(build.sourceBranchName)

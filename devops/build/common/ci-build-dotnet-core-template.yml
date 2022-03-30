@@ -1,0 +1,119 @@
+stages:
+  - stage: EmitBuildMetadata
+    displayName: Emit Build Metadata
+    jobs:
+      - job: GenerateMetadata
+        displayName: Generate Metadata
+        steps:
+          # 1. Generate buildinfo.json
+          # 2/3. Check if this file exists if so set variable
+          # 4. Copy file to staging directory
+          # 5. Publish buildinfo.json so we can use it in the Docker build
+          - bash: |
+              echo -e -n "{\"buildNumber\":\"$(Build.BuildNumber)\",\"buildId\":\"$(Build.BuildId)\",\"branchName\":\"$(Build.SourceBranchName)\",\"commitHash\":\"$(Build.SourceVersion)\"}" > "$(Build.SourcesDirectory)/$(projectParentDirectory)/$(projectSourceRelativeDirectory)/buildinfo.json"
+              ls -ltr '$(Build.SourcesDirectory)/$(projectParentDirectory)/$(projectSourceRelativeDirectory)'
+            displayName: Generate buildinfo.json
+            failOnStderr: true
+          - bash: |
+              echo "Check if buildinfo.json exists in $(projectParentDirectory)/$(projectSourceRelativeDirectory)"
+              if [ -f "$(projectParentDirectory)/$(projectSourceRelativeDirectory)/buildinfo.json" ]; then
+                echo "Looks like buildinfo.json exists in dir $(projectParentDirectory)/$(projectSourceRelativeDirectory)"
+                echo "##vso[task.setvariable variable=buildInfoFileExists;isOutput=true]true"
+              fi
+            name: IsBuildInfoExists
+            displayName: Check buildinfo.json Exists
+            failOnStderr: true
+          - bash: |
+              echo "buildinfo.json file exists? $(IsBuildInfoExists.buildInfoFileExists)"
+            displayName: Verify buildinfo.json Exists
+            failOnStderr: true
+          - task: CopyFiles@2
+            displayName: Copy buildinfo.json To Publish
+            inputs:
+              contents: '$(Build.SourcesDirectory)/$(projectParentDirectory)/$(projectSourceRelativeDirectory)/buildinfo.json'
+              targetFolder: '$(Build.ArtifactStagingDirectory)/$(projectParentDirectory)/buildinfo'
+              OverWrite: true
+              flattenFolders: true
+          - publish: '$(Build.ArtifactStagingDirectory)/$(projectParentDirectory)/buildinfo/buildinfo.json'
+            displayName: Publishing buildinfo.json Artifact
+            artifact: buildinfo
+  - stage: DotNetCoreTest
+    displayName: Application Test Stage
+    variables:
+      prPatch: $(System.PullRequest.PullRequestId)
+    jobs:
+      - job: Test
+        displayName: Test Application
+        steps:
+          # 1. If a PR does happen update the assembly metadata
+          # 2. Do a Nuget restore
+          # 3. Build in release mode
+          # 4. Finally run unit tests
+          - task: Assembly-Info-NetCore@3
+            displayName: Set Build Number For Pull Request
+            condition: eq(variables['Build.Reason'], 'PullRequest')
+            inputs:
+              Path: '$(projectParentDirectory)/$(projectSourceRelativeDirectory)'
+              FileNames: '$(Build.SourcesDirectory)/$(projectParentDirectory)/$(projectSourceRelativeDirectory)/*.csproj'
+              FileEncoding: 'utf-8'
+              InsertAttributes: true
+              WriteBOM: true
+              FailOnWarning: true
+              Authors: '$(assemblyAuthor)'
+              PackageVersion: '$(buildVersion).$(buildPatch)'
+              UpdateBuildNumber: '$(Build.DefinitionName)_v$(buildVersion).$(buildPatch)'
+              AddBuildTag: 'v$(buildVersion).$(buildPatch)'
+              DisableTelemetry: true
+          - task: DotNetCoreCLI@2
+            inputs:
+              command: 'restore'
+              projects: '$(Build.SourcesDirectory)/$(projectParentDirectory)/$(projectSourceRelativeDirectory)/*.csproj'
+              feedsToUse: 'select'
+              verbosityRestore: 'Minimal'
+          - task: DotNetCoreCLI@2
+            displayName: $(buildConfig) Build
+            inputs:
+              command: 'build'
+              projects: '$(Build.SourcesDirectory)/$(projectParentDirectory)/$(projectSourceRelativeDirectory)/*.csproj'
+              arguments: '--configuration $(buildConfig)'
+          - task: DotNetCoreCLI@2
+            displayName: DotNet Test
+            inputs:
+              command: 'test'
+              projects: '$(Build.SourcesDirectory)/$(projectParentDirectory)/$(projectSourceRelativeDirectory)*[Tt]ests/*.csproj'
+              arguments: '--configuration $(buildConfig)'
+
+  - stage: DotNetCoreBuild
+    displayName: Application Build Stage
+    condition: and(succeeded(), eq(variables.isTag, true))
+    dependsOn: ['EmitBuildMetadata']
+    variables:
+      buildInfoFileExists: $[ stageDependencies.EmitBuildMetadata.GenerateMetadata.outputs['IsBuildInfoExists.buildInfoFileExists'] ]
+    jobs:
+      - job: Build
+        displayName: Build Application
+        steps:
+          # 1. Update assembly information metadata with versions
+          # 2. Execute a build
+          - task: Assembly-Info-NetCore@3
+            displayName: Set Assembly Metadata
+            condition: eq(variables.buildInfoFileExists, 'true')
+            inputs:
+              Path: '$(projectParentDirectory)/$(projectSourceRelativeDirectory)'
+              FileNames: '$(Build.SourcesDirectory)/$(projectParentDirectory)/$(projectSourceRelativeDirectory)/*.csproj'
+              FileEncoding: 'iso-8859-2'
+              InsertAttributes: true
+              WriteBOM: true
+              FailOnWarning: true
+              Authors: '$(assemblyAuthor)'
+              PackageVersion: '$(buildVersion).$(buildPatch)'
+              UpdateBuildNumber: '$(Build.DefinitionName)_v$(buildVersion).$(buildPatch)'
+              AddBuildTag: 'v$(buildVersion).$(buildPatch)'
+              DisableTelemetry: true
+          - task: DotNetCoreCLI@2
+            displayName: $(buildConfig) Build
+            condition: eq(variables.buildInfoFileExists, 'true')
+            inputs:
+              command: 'build'
+              projects: '$(Build.SourcesDirectory)/$(projectParentDirectory)/$(projectSourceRelativeDirectory)/*.csproj'
+              arguments: '--configuration $(buildConfig)'

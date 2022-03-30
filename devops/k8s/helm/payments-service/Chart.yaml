@@ -1,0 +1,6 @@
+apiVersion: v2
+name: payments-service
+description: A Helm chart for Payments service
+type: application
+version: 0.1.0
+appVersion: 1.0.0

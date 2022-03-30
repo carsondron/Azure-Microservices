@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "notifications.name" . }}
+  labels:
+    app: {{ template "notifications.name" . }}
+    chart: {{ template "notifications.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.service.ports.http }}
+      targetPort: http
+      protocol: TCP
+    - name: grpc
+      port: {{ .Values.service.ports.grpc }}
+      targetPort: grpc
+      protocol: TCP
+  selector:
+    app: {{ template "notifications.name" . }}
+    release: {{ .Release.Name }}
